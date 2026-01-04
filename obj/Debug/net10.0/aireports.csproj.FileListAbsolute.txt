@@ -31,3 +31,5 @@
 /Users/yura_kulakovskyi/Documents/Web/aireports/obj/Debug/net10.0/aireports.pdb
 /Users/yura_kulakovskyi/Documents/Web/aireports/obj/Debug/net10.0/aireports.genruntimeconfig.cache
 /Users/yura_kulakovskyi/Documents/Web/aireports/obj/Debug/net10.0/ref/aireports.dll
+/Users/yura_kulakovskyi/Documents/Web/aireports/bin/Debug/net10.0/todos.json
+/Users/yura_kulakovskyi/Documents/Web/aireports/obj/Debug/net10.0/aireports.sourcelink.json
