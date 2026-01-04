@@ -1,18 +1,17 @@
-using aireports.Modules.AI.Domain.Interfaces;
+using aireports.Modules.Tasks.Extensions;
+using aireports.Modules.AI.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
-builder.Services.AddScoped<AskAiHandler>();
-builder.Services.AddScoped<IAiClient, MockAiClient>();
+var services = builder.Services;
+services
+    .AddAiModule()
+    .AddTodoModule()
+    .AddControllers();
 
 var app = builder.Build();
 
-app.UseAuthentication();
-app.UseAuthorization();
-
 app.UseMiddleware<ExceptionMiddleware>();
-
 app.MapControllers();
 
 app.Run();
