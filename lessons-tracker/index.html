@@ -1,0 +1,406 @@
+<title>Облік занять</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one narrow column, a ledger card on top, the entry form under it, then the month's records */
+:root {
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --ink: #18202b;
+  --muted: #5d6877;
+  --line: #d9dfe6;
+  --accent: #2648c4;
+  --accent-soft: #e3e9fb;
+  --consult: #a75f00;
+  --consult-soft: #fbeedb;
+  --danger: #b4232f;
+  --on-accent: #ffffff;
+  --font-display: "Unbounded", "Manrope", system-ui, sans-serif;
+  --font-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151b; --surface: #1a2029; --ink: #e8ecf2; --muted: #98a3b3; --line: #2c3542;
+    --accent: #8ea6ff; --accent-soft: #232f52; --consult: #f0ad52; --consult-soft: #3a2c17;
+    --danger: #ff7b85; --on-accent: #10172e; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151b; --surface: #1a2029; --ink: #e8ecf2; --muted: #98a3b3; --line: #2c3542;
+  --accent: #8ea6ff; --accent-soft: #232f52; --consult: #f0ad52; --consult-soft: #3a2c17;
+  --danger: #ff7b85; --on-accent: #10172e; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 520px; margin: 0 auto; padding: 16px 16px 48px; display: grid; gap: 18px; }
+h1, h2 { font-family: var(--font-display); font-weight: 700; margin: 0; text-wrap: balance; }
+h1 { font-size: 20px; letter-spacing: -0.01em; }
+h2 { font-size: 14px; font-weight: 500; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sync { font-size: 12px; color: var(--muted); }
+
+.month { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.month-name { font-family: var(--font-display); font-size: 17px; font-weight: 500; text-align: center; flex: 1; }
+.icon-btn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-size: 20px; line-height: 1; display: grid; place-items: center; }
+
+.ledger { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 6px 18px; }
+.row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px dashed var(--line); }
+.row .lbl { display: grid; gap: 1px; }
+.row .lbl small { color: var(--muted); font-size: 12px; }
+.row .val { font-size: 17px; white-space: nowrap; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
+.dot.l { background: var(--accent); }
+.dot.c { background: var(--consult); }
+.row.total { border-bottom: 0; padding: 16px 0 14px; }
+.row.total .lbl { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
+.row.total .val { font-size: 24px; font-weight: 500; color: var(--accent); }
+.alltime { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 12px 18px; border-radius: 14px; background: var(--accent-soft); }
+.alltime b { font-weight: 600; }
+.alltime small { display: block; color: var(--muted); font-size: 12px; }
+.alltime .val { font-size: 18px; white-space: nowrap; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; display: grid; gap: 14px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: var(--bg); }
+.seg button { border: 0; background: transparent; padding: 10px 6px; border-radius: 9px; font-weight: 600; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.field { display: grid; gap: 6px; }
+.field > span { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+input[type="date"], input[type="number"], input[type="text"] {
+  width: 100%; min-width: 0; font: inherit; font-size: 16px; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px;
+}
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid2 > * { min-width: 0; }
+.stepper { display: grid; grid-template-columns: 44px 1fr 44px; gap: 8px; align-items: center; }
+.stepper output { text-align: center; font-size: 22px; }
+.preview { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; color: var(--muted); font-size: 13px; }
+.preview .num { color: var(--ink); font-size: 18px; }
+.primary { border: 0; border-radius: 12px; padding: 14px; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 16px; }
+.primary.consult { background: var(--consult); color: var(--on-accent); }
+.toast { font-size: 13px; color: var(--muted); min-height: 1.2em; text-align: center; margin: -4px 0 0; }
+
+.list { display: grid; gap: 10px; }
+.day { display: grid; gap: 6px; }
+.day-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); padding: 0 4px; }
+.entry { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px 10px 12px; }
+.tag { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.tag.l { background: var(--accent-soft); color: var(--accent); }
+.tag.c { background: var(--consult-soft); color: var(--consult); }
+.entry .desc { min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.entry .desc small { display: block; color: var(--muted); font-size: 12px; }
+.entry .amt { white-space: nowrap; }
+.del { border: 0; background: transparent; color: var(--muted); padding: 6px 8px; border-radius: 8px; font-size: 13px; }
+.del.armed { color: var(--danger); background: var(--consult-soft); font-weight: 700; }
+.empty { text-align: center; color: var(--muted); padding: 22px 12px; border: 1px dashed var(--line); border-radius: 14px; }
+
+details.settings { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; }
+details.settings summary { cursor: pointer; font-weight: 600; }
+details.settings .grid2 { margin-top: 12px; }
+@media (prefers-reduced-motion: no-preference) { .primary { transition: transform .08s; } .primary:active { transform: scale(.98); } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Облік занять</h1>
+    <span class="sync" id="sync">Завантаження…</span>
+  </header>
+
+  <nav class="month" aria-label="Місяць">
+    <button class="icon-btn" id="prev" aria-label="Попередній місяць">‹</button>
+    <div class="month-name" id="monthName">—</div>
+    <button class="icon-btn" id="next" aria-label="Наступний місяць">›</button>
+  </nav>
+
+  <section class="ledger" aria-label="Підсумок за місяць">
+    <div class="row"><div class="lbl"><span><span class="dot l"></span>За уроки</span><small id="lessonsMeta">0 уроків · 0 учнів</small></div><div class="val num" id="sumLessons">0 ₴</div></div>
+    <div class="row"><div class="lbl"><span><span class="dot c"></span>За консультації</span><small id="consultMeta">0 консультацій</small></div><div class="val num" id="sumConsult">0 ₴</div></div>
+    <div class="row total"><div class="lbl">Все за місяць</div><div class="val num" id="sumMonth">0 ₴</div></div>
+  </section>
+
+  <div class="alltime">
+    <div><b>Весь дохід</b><small id="allMeta">за весь час</small></div>
+    <div class="val num" id="sumAll">0 ₴</div>
+  </div>
+
+  <form class="card" id="form" autocomplete="off">
+    <h2>Додати запис</h2>
+    <div class="seg" role="group" aria-label="Тип запису">
+      <button type="button" id="tLesson" aria-pressed="true">Урок</button>
+      <button type="button" id="tConsult" aria-pressed="false">Консультація</button>
+    </div>
+    <label class="field"><span>Дата</span><input type="date" id="date" required></label>
+
+    <div class="field" id="studentsField">
+      <span>Присутніх учнів</span>
+      <div class="stepper">
+        <button type="button" class="icon-btn" id="minus" aria-label="Менше учнів">−</button>
+        <output class="num" id="students">1</output>
+        <button type="button" class="icon-btn" id="plus" aria-label="Більше учнів">+</button>
+      </div>
+    </div>
+
+    <label class="field" id="priceField" hidden><span>Сума за консультацію, ₴</span><input type="number" id="price" inputmode="numeric" min="0" step="10"></label>
+    <label class="field"><span>Примітка (необов'язково)</span><input type="text" id="note" maxlength="80" placeholder="Напр. група 7-А, Олена"></label>
+
+    <div class="preview"><span id="previewText">1 учень × 200 ₴</span><span class="num" id="previewSum">200 ₴</span></div>
+    <button type="submit" class="primary" id="submit">Додати урок</button>
+    <p class="toast" id="toast" role="status"></p>
+  </form>
+
+  <section class="list" id="list" aria-label="Записи за місяць"></section>
+
+  <details class="settings">
+    <summary>Ціни</summary>
+    <div class="grid2">
+      <label class="field"><span>1 учень на уроці, ₴</span><input type="number" id="setRate" inputmode="numeric" min="0" step="10"></label>
+      <label class="field"><span>Консультація за замовч., ₴</span><input type="number" id="setConsult" inputmode="numeric" min="0" step="10"></label>
+    </div>
+  </details>
+</div>
+
+<script>
+(function () {
+  const MONTHS = ["Січень","Лютий","Березень","Квітень","Травень","Червень","Липень","Серпень","Вересень","Жовтень","Листопад","Грудень"];
+  const MONTHS_GEN = ["січня","лютого","березня","квітня","травня","червня","липня","серпня","вересня","жовтня","листопада","грудня"];
+  const WEEKDAYS = ["нд","пн","вт","ср","чт","пт","сб"];
+  const LS_KEY = "lessons-tracker-v1";
+  const $ = (id) => document.getElementById(id);
+
+  const state = {
+    entries: [],
+    settings: { rate: 200, consultPrice: 200 },
+    type: "lesson",
+    students: 1,
+    month: todayISO().slice(0, 7),
+    mode: "loading",
+  };
+
+  function todayISO() {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function money(n) { return Math.round(n).toLocaleString("uk-UA") + " ₴"; }
+  function plural(n, one, few, many) {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+    return many;
+  }
+  function monthLabel(key) { const [y, m] = key.split("-").map(Number); return MONTHS[m - 1] + " " + y; }
+  function shiftMonth(key, delta) {
+    let [y, m] = key.split("-").map(Number);
+    m += delta; while (m < 1) { m += 12; y--; } while (m > 12) { m -= 12; y++; }
+    return y + "-" + String(m).padStart(2, "0");
+  }
+
+  // ---------- storage: cloud db when the viewer grants it, else this device ----------
+  let db = null;
+  function loadLocal() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) { const p = JSON.parse(raw); state.entries = p.entries || []; Object.assign(state.settings, p.settings || {}); }
+    } catch (e) {}
+  }
+  function saveLocal() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ entries: state.entries, settings: state.settings })); } catch (e) {}
+  }
+  const store = {
+    async add(entry) {
+      if (db) { await db.collection("entries").add(entry); return; }
+      state.entries.push(Object.assign({ id: "e" + Date.now() + Math.random().toString(36).slice(2, 6) }, entry));
+      saveLocal(); render();
+    },
+    async remove(id) {
+      if (db) { await db.collection("entries").doc(id).delete(); return; }
+      state.entries = state.entries.filter((e) => e.id !== id);
+      saveLocal(); render();
+    },
+    async saveSettings() {
+      if (db) { await db.doc("settings/main").set(Object.assign({}, state.settings)); return; }
+      saveLocal();
+    },
+  };
+
+  async function connect() {
+    let ns = null;
+    try { ns = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch (e) { ns = null; }
+    if (!ns) { state.mode = "local"; loadLocal(); render(); return; }
+    db = ns; state.mode = "cloud";
+    db.collection("entries").onSnapshot((snap) => {
+      state.entries = snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
+      render();
+    }, () => { $("sync").textContent = "Немає зв'язку з хмарою"; });
+    db.doc("settings/main").onSnapshot((snap) => {
+      if (snap.exists) { Object.assign(state.settings, snap.data()); syncSettingsInputs(); renderForm(); render(); }
+    });
+    render();
+  }
+
+  // ---------- rendering ----------
+  function render() {
+    $("sync").textContent = state.mode === "cloud" ? "Збережено в хмарі" : state.mode === "local" ? "Збережено на цьому пристрої" : "Завантаження…";
+    $("monthName").textContent = monthLabel(state.month);
+
+    const inMonth = state.entries.filter((e) => typeof e.date === "string" && e.date.slice(0, 7) === state.month);
+    const lessons = inMonth.filter((e) => e.type === "lesson");
+    const consults = inMonth.filter((e) => e.type === "consult");
+    const sum = (arr) => arr.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    const sl = sum(lessons), sc = sum(consults);
+    const pupils = lessons.reduce((s, e) => s + (Number(e.students) || 0), 0);
+
+    $("sumLessons").textContent = money(sl);
+    $("sumConsult").textContent = money(sc);
+    $("sumMonth").textContent = money(sl + sc);
+    $("lessonsMeta").textContent = lessons.length + " " + plural(lessons.length, "урок", "уроки", "уроків") + " · " + pupils + " " + plural(pupils, "учень", "учні", "учнів");
+    $("consultMeta").textContent = consults.length + " " + plural(consults.length, "консультація", "консультації", "консультацій");
+
+    const all = sum(state.entries);
+    const months = new Set(state.entries.map((e) => (e.date || "").slice(0, 7)).filter(Boolean));
+    $("sumAll").textContent = money(all);
+    $("allMeta").textContent = months.size ? "за весь час · " + months.size + " " + plural(months.size, "місяць", "місяці", "місяців") : "за весь час";
+
+    renderList(inMonth);
+  }
+
+  function renderList(inMonth) {
+    const list = $("list");
+    list.textContent = "";
+    if (!inMonth.length) {
+      const p = document.createElement("div");
+      p.className = "empty";
+      p.textContent = state.mode === "loading" ? "Завантажуємо записи…" : "За " + monthLabel(state.month).toLowerCase() + " записів немає. Додайте перший урок у формі вище.";
+      list.appendChild(p);
+      return;
+    }
+    const byDay = {};
+    inMonth.forEach((e) => { (byDay[e.date] = byDay[e.date] || []).push(e); });
+    Object.keys(byDay).sort().reverse().forEach((day) => {
+      const items = byDay[day].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      const wrap = document.createElement("div"); wrap.className = "day";
+      const head = document.createElement("div"); head.className = "day-head";
+      const d = new Date(day + "T12:00:00");
+      const left = document.createElement("span"); left.textContent = d.getDate() + " " + MONTHS_GEN[d.getMonth()] + ", " + WEEKDAYS[d.getDay()];
+      const right = document.createElement("span"); right.className = "num"; right.textContent = money(items.reduce((s, e) => s + (Number(e.amount) || 0), 0));
+      head.append(left, right); wrap.appendChild(head);
+      items.forEach((e) => wrap.appendChild(entryRow(e)));
+      list.appendChild(wrap);
+    });
+  }
+
+  function entryRow(e) {
+    const row = document.createElement("div"); row.className = "entry";
+    const tag = document.createElement("span");
+    const isL = e.type === "lesson";
+    tag.className = "tag " + (isL ? "l" : "c"); tag.textContent = isL ? "Урок" : "Конс.";
+    const desc = document.createElement("div"); desc.className = "desc";
+    desc.textContent = isL ? e.students + " " + plural(e.students, "учень", "учні", "учнів") + " × " + money(e.rate || state.settings.rate) : "Консультація";
+    if (e.note) { const s = document.createElement("small"); s.textContent = e.note; desc.appendChild(s); }
+    const amt = document.createElement("span"); amt.className = "amt num"; amt.textContent = money(e.amount);
+    const del = document.createElement("button"); del.type = "button"; del.className = "del"; del.textContent = "✕";
+    del.setAttribute("aria-label", "Видалити запис");
+    let timer = null;
+    del.addEventListener("click", async () => {
+      if (!del.classList.contains("armed")) {
+        del.classList.add("armed"); del.textContent = "Видалити?";
+        timer = setTimeout(() => { del.classList.remove("armed"); del.textContent = "✕"; }, 3000);
+        return;
+      }
+      clearTimeout(timer); del.disabled = true;
+      try { await store.remove(e.id); toast("Запис видалено"); }
+      catch (err) { del.disabled = false; toast("Не вдалося видалити. Спробуйте ще раз."); }
+    });
+    row.append(tag, desc, amt, del);
+    return row;
+  }
+
+  function renderForm() {
+    const isL = state.type === "lesson";
+    $("tLesson").setAttribute("aria-pressed", String(isL));
+    $("tConsult").setAttribute("aria-pressed", String(!isL));
+    $("studentsField").hidden = !isL;
+    $("priceField").hidden = isL;
+    $("students").textContent = state.students;
+    const btn = $("submit");
+    btn.textContent = isL ? "Додати урок" : "Додати консультацію";
+    btn.classList.toggle("consult", !isL);
+    if (isL) {
+      $("previewText").textContent = state.students + " " + plural(state.students, "учень", "учні", "учнів") + " × " + money(state.settings.rate);
+      $("previewSum").textContent = money(state.students * state.settings.rate);
+    } else {
+      $("previewText").textContent = "Консультація";
+      $("previewSum").textContent = money(Number($("price").value) || 0);
+    }
+  }
+
+  function syncSettingsInputs() {
+    if (document.activeElement !== $("setRate")) $("setRate").value = state.settings.rate;
+    if (document.activeElement !== $("setConsult")) $("setConsult").value = state.settings.consultPrice;
+    if (document.activeElement !== $("price") && !$("price").dataset.touched) $("price").value = state.settings.consultPrice;
+  }
+
+  let toastTimer = null;
+  function toast(msg) {
+    $("toast").textContent = msg;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { $("toast").textContent = ""; }, 2500);
+  }
+
+  // ---------- events ----------
+  $("prev").addEventListener("click", () => { state.month = shiftMonth(state.month, -1); render(); });
+  $("next").addEventListener("click", () => { state.month = shiftMonth(state.month, 1); render(); });
+  $("tLesson").addEventListener("click", () => { state.type = "lesson"; renderForm(); });
+  $("tConsult").addEventListener("click", () => { state.type = "consult"; renderForm(); });
+  $("minus").addEventListener("click", () => { state.students = Math.max(1, state.students - 1); renderForm(); });
+  $("plus").addEventListener("click", () => { state.students = Math.min(50, state.students + 1); renderForm(); });
+  $("price").addEventListener("input", () => { $("price").dataset.touched = "1"; renderForm(); });
+
+  function bindSetting(id, key) {
+    $(id).addEventListener("change", async () => {
+      const v = Number($(id).value);
+      if (!(v >= 0)) { syncSettingsInputs(); return; }
+      state.settings[key] = v;
+      if (key === "consultPrice") { delete $("price").dataset.touched; }
+      syncSettingsInputs(); renderForm();
+      try { await store.saveSettings(); toast("Ціну збережено"); } catch (e) { toast("Не вдалося зберегти ціну."); }
+    });
+  }
+  bindSetting("setRate", "rate");
+  bindSetting("setConsult", "consultPrice");
+
+  $("form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const date = $("date").value;
+    if (!date) { toast("Оберіть дату."); return; }
+    const note = $("note").value.trim();
+    let entry;
+    if (state.type === "lesson") {
+      entry = { type: "lesson", date, students: state.students, rate: state.settings.rate, amount: state.students * state.settings.rate, note, createdAt: Date.now() };
+    } else {
+      const amount = Number($("price").value);
+      if (!(amount > 0)) { toast("Вкажіть суму за консультацію."); return; }
+      entry = { type: "consult", date, amount, note, createdAt: Date.now() };
+    }
+    const btn = $("submit"); btn.disabled = true;
+    try {
+      await store.add(entry);
+      state.month = date.slice(0, 7);
+      $("note").value = "";
+      toast((entry.type === "lesson" ? "Урок" : "Консультацію") + " додано: +" + money(entry.amount));
+      render();
+    } catch (e) {
+      toast("Не вдалося зберегти. Перевірте інтернет і спробуйте ще раз.");
+    } finally { btn.disabled = false; }
+  });
+
+  $("date").value = todayISO();
+  syncSettingsInputs();
+  renderForm();
+  render();
+  connect();
+})();
+</script>
